@@ -29,11 +29,12 @@ st.sidebar.caption("ML-powered healthcare system")
 # ================= SIDEBAR CUSTOM STYLE =================
 st.markdown("""
 <style>
-/* Sidebar radio button selector */
-[data-testid="stSidebarNav"] div[role="radiogroup"] label {
-    font-size: 16px;
+/* Replace default >> with a custom symbol (⭐) */
+[data-testid="stSidebarNav"] div[role="radiogroup"] label::before {
+    content: "⭐";
     color: #FF4B4B;
-    font-weight: bold;
+    font-size: 16px;
+    margin-right: 8px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -114,7 +115,7 @@ elif page == "📈 Project Insights":
     with col1:
         st.info("🧾 Input Features")
         st.markdown("""
-        Age, Gender, BMI  
+        Age, Gender, Height & Weight (BMI)  
         Blood Pressure  
         Cholesterol  
         Smoking, Diabetes  
@@ -159,7 +160,22 @@ elif page == "❤️ Risk Prediction":
     with col1:
         age = st.number_input("Age", 0, 120, 35)
         gender = st.selectbox("Gender", ["Female", "Male"])
-        bmi = st.number_input("BMI", 0.0, 60.0, 24.0)
+        height_cm = st.number_input("Height (cm)", 50, 250, 170)
+        weight_kg = st.number_input("Weight (kg)", 10, 200, 70)
+
+        # Calculate BMI
+        bmi = weight_kg / ((height_cm / 100) ** 2)
+        st.write(f"Calculated BMI: {bmi:.2f}")
+
+        # BMI Category
+        if bmi < 18.5:
+            st.warning("BMI Category: Underweight")
+        elif bmi < 25:
+            st.success("BMI Category: Normal weight")
+        elif bmi < 30:
+            st.warning("BMI Category: Overweight")
+        else:
+            st.error("BMI Category: Obese")
 
     with col2:
         bp = st.number_input("Blood Pressure", 80, 200, 120)
@@ -180,6 +196,7 @@ elif page == "❤️ Risk Prediction":
 
     if st.button("🧠 Analyze Heart Risk", use_container_width=True):
 
+        # 20-feature input for your model
         X = np.array([[ 
             age, gender_enc, bp, chol, 1, smoking_enc, 0,
             diabetes_enc, bmi, 0,0,0,0, stress, sleep,0,150,90,1.2,10
@@ -188,10 +205,10 @@ elif page == "❤️ Risk Prediction":
         # SAFETY CHECK
         assert X.shape[1] == model.n_features_in_
 
+        # Predict probability
         prob = model.predict_proba(X)[0][1]
 
         st.subheader("📊 Risk Assessment")
-
         st.progress(int(prob * 100))
         st.metric("Heart Disease Probability", f"{prob*100:.2f}%")
 
@@ -208,7 +225,7 @@ elif page == "❤️ Risk Prediction":
         st.caption("⚠️ AI-based prediction — not a medical diagnosis.")
 
         # ================= PDF DOWNLOAD =================
-        def generate_pdf(age, gender, bmi, bp, chol, sleep, smoking, diabetes, stress, prob):
+        def generate_pdf(age, gender, height_cm, weight_kg, bmi, bp, chol, sleep, smoking, diabetes, stress, prob):
             pdf = FPDF()
             pdf.add_page()
             pdf.set_font("Arial", "B", 16)
@@ -218,7 +235,9 @@ elif page == "❤️ Risk Prediction":
             pdf.set_font("Arial", "", 12)
             pdf.cell(0, 10, f"Age: {age}", ln=True)
             pdf.cell(0, 10, f"Gender: {gender}", ln=True)
-            pdf.cell(0, 10, f"BMI: {bmi}", ln=True)
+            pdf.cell(0, 10, f"Height: {height_cm} cm", ln=True)
+            pdf.cell(0, 10, f"Weight: {weight_kg} kg", ln=True)
+            pdf.cell(0, 10, f"BMI: {bmi:.2f}", ln=True)
             pdf.cell(0, 10, f"Blood Pressure: {bp}", ln=True)
             pdf.cell(0, 10, f"Cholesterol Level: {chol}", ln=True)
             pdf.cell(0, 10, f"Sleep Hours: {sleep}", ln=True)
@@ -228,12 +247,13 @@ elif page == "❤️ Risk Prediction":
             pdf.ln(5)
             pdf.cell(0, 10, f"Predicted Heart Disease Risk: {prob*100:.2f}%", ln=True)
 
+            # Convert PDF to download link
             pdf_output = pdf.output(dest='S').encode('latin1')
             b64 = base64.b64encode(pdf_output).decode()
             href = f'<a href="data:application/octet-stream;base64,{b64}" download="Heart_Risk_Report.pdf">📄 Download PDF Report</a>'
             st.markdown(href, unsafe_allow_html=True)
 
-        generate_pdf(age, gender, bmi, bp, chol, sleep, smoking, diabetes, stress, prob)
+        generate_pdf(age, gender, height_cm, weight_kg, bmi, bp, chol, sleep, smoking, diabetes, stress, prob)
 
 # ================= FOOTER =================
 st.markdown("---")
@@ -241,6 +261,6 @@ st.markdown("""
 <p style='text-align:center'>
 © 2025 HeartCare AI | Developed by Kamalesh  
 <a href='https://www.linkedin.com/in/kamalesh-v-a1504a33a' target='_blank'>LinkedIn</a> | 
-<a href='https://https://github.com/kamaleshcr7' target='_blank'>GitHub</a>
+<a href='https://github.com/kamaleshcr7' target='_blank'>GitHub</a>
 </p>
 """, unsafe_allow_html=True)
