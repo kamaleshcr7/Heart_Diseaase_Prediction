@@ -67,5 +67,4 @@ The UI collects essential inputs while remaining features are safely auto-filled
 
 ---
 
-## 📂 Project Structure
 
