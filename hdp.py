@@ -1,6 +1,8 @@
 import streamlit as st
 import numpy as np
 import pickle
+from fpdf import FPDF
+import base64
 
 # ================= PAGE CONFIG =================
 st.set_page_config(
@@ -17,12 +19,24 @@ with open("hdp.pkl", "rb") as f:
 st.sidebar.title("🫀 HeartCare AI")
 page = st.sidebar.radio(
     "Navigation",
-    ["🏠 Overview", "📊 Project Insights", "🩺 Risk Prediction"]
+    ["🏡 Home", "📈 Project Insights", "❤️ Risk Prediction"]
 )
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("**Developer:** Kamalesh")
 st.sidebar.caption("ML-powered healthcare system")
+
+# ================= SIDEBAR CUSTOM STYLE =================
+st.markdown("""
+<style>
+/* Sidebar radio button selector */
+[data-testid="stSidebarNav"] div[role="radiogroup"] label {
+    font-size: 16px;
+    color: #FF4B4B;
+    font-weight: bold;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ================= GLOBAL STYLES =================
 st.markdown("""
@@ -54,9 +68,9 @@ AI-driven cardiovascular risk assessment
 st.markdown("<br>", unsafe_allow_html=True)
 
 # =====================================================
-# 🏠 OVERVIEW
+# 🏡 HOME / OVERVIEW
 # =====================================================
-if page == "🏠 Overview":
+if page == "🏡 Home":
     col1, col2 = st.columns([1.4, 1])
 
     with col1:
@@ -84,9 +98,9 @@ if page == "🏠 Overview":
         st.markdown("</div>", unsafe_allow_html=True)
 
 # =====================================================
-# 📊 PROJECT INSIGHTS
+# 📈 PROJECT INSIGHTS
 # =====================================================
-elif page == "📊 Project Insights":
+elif page == "📈 Project Insights":
     st.markdown("<div class='card'>", unsafe_allow_html=True)
 
     st.subheader("📌 Project Summary")
@@ -127,9 +141,9 @@ elif page == "📊 Project Insights":
     st.markdown("</div>", unsafe_allow_html=True)
 
 # =====================================================
-# 🩺 RISK PREDICTION
+# ❤️ RISK PREDICTION
 # =====================================================
-elif page == "🩺 Risk Prediction":
+elif page == "❤️ Risk Prediction":
 
     st.subheader("🧾 Patient Health Information")
 
@@ -158,36 +172,17 @@ elif page == "🩺 Risk Prediction":
         stress = st.slider("Stress Level", 0, 10, 4)
 
     # ================= ENCODING =================
-    gender = 1 if gender == "Male" else 0
-    smoking = 1 if smoking == "Yes" else 0
-    diabetes = 1 if diabetes == "Yes" else 0
+    gender_enc = 1 if gender == "Male" else 0
+    smoking_enc = 1 if smoking == "Yes" else 0
+    diabetes_enc = 1 if diabetes == "Yes" else 0
 
     st.markdown("<br>", unsafe_allow_html=True)
 
     if st.button("🧠 Analyze Heart Risk", use_container_width=True):
 
-        # ================= 20 FEATURES (CORRECT ORDER) =================
         X = np.array([[ 
-            age,                   # 1 Age
-            gender,                # 2 Gender
-            bp,                    # 3 Blood Pressure
-            chol,                  # 4 Cholesterol Level
-            1,                     # 5 Exercise Habits (Moderate)
-            smoking,               # 6 Smoking
-            0,                     # 7 Family Heart Disease
-            diabetes,              # 8 Diabetes
-            bmi,                   # 9 BMI
-            0,                     # 10 High Blood Pressure
-            0,                     # 11 Low HDL Cholesterol
-            0,                     # 12 High LDL Cholesterol
-            0,                     # 13 Alcohol Consumption
-            stress,                # 14 Stress Level
-            sleep,                 # 15 Sleep Hours
-            0,                     # 16 Sugar Consumption
-            150,                   # 17 Triglyceride Level
-            90,                    # 18 Fasting Blood Sugar
-            1.2,                   # 19 CRP Level
-            10                     # 20 Homocysteine Level
+            age, gender_enc, bp, chol, 1, smoking_enc, 0,
+            diabetes_enc, bmi, 0,0,0,0, stress, sleep,0,150,90,1.2,10
         ]])
 
         # SAFETY CHECK
@@ -212,6 +207,40 @@ elif page == "🩺 Risk Prediction":
 
         st.caption("⚠️ AI-based prediction — not a medical diagnosis.")
 
+        # ================= PDF DOWNLOAD =================
+        def generate_pdf(age, gender, bmi, bp, chol, sleep, smoking, diabetes, stress, prob):
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", "B", 16)
+            pdf.cell(0, 10, "Heart Disease Risk Report", ln=True, align="C")
+            pdf.ln(10)
+
+            pdf.set_font("Arial", "", 12)
+            pdf.cell(0, 10, f"Age: {age}", ln=True)
+            pdf.cell(0, 10, f"Gender: {gender}", ln=True)
+            pdf.cell(0, 10, f"BMI: {bmi}", ln=True)
+            pdf.cell(0, 10, f"Blood Pressure: {bp}", ln=True)
+            pdf.cell(0, 10, f"Cholesterol Level: {chol}", ln=True)
+            pdf.cell(0, 10, f"Sleep Hours: {sleep}", ln=True)
+            pdf.cell(0, 10, f"Smoking: {smoking}", ln=True)
+            pdf.cell(0, 10, f"Diabetes: {diabetes}", ln=True)
+            pdf.cell(0, 10, f"Stress Level: {stress}", ln=True)
+            pdf.ln(5)
+            pdf.cell(0, 10, f"Predicted Heart Disease Risk: {prob*100:.2f}%", ln=True)
+
+            pdf_output = pdf.output(dest='S').encode('latin1')
+            b64 = base64.b64encode(pdf_output).decode()
+            href = f'<a href="data:application/octet-stream;base64,{b64}" download="Heart_Risk_Report.pdf">📄 Download PDF Report</a>'
+            st.markdown(href, unsafe_allow_html=True)
+
+        generate_pdf(age, gender, bmi, bp, chol, sleep, smoking, diabetes, stress, prob)
+
 # ================= FOOTER =================
 st.markdown("---")
-st.caption("© 2025 HeartCare AI | Developed by Kamalesh")
+st.markdown("""
+<p style='text-align:center'>
+© 2025 HeartCare AI | Developed by Kamalesh  
+<a href='https://www.linkedin.com/in/kamalesh-v-a1504a33a' target='_blank'>LinkedIn</a> | 
+<a href='https://https://github.com/kamaleshcr7' target='_blank'>GitHub</a>
+</p>
+""", unsafe_allow_html=True)
